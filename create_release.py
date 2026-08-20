@@ -1,71 +1,165 @@
 import os
 import sys
 import requests
-from requests.auth import HTTPBasicAuth
 
-version = os.environ["VERSION"]
-tag = os.environ["TAG"]
-environment = os.environ["ENVIRONMENT"]
-repository = os.environ["REPOSITORY"]
-workflow = os.environ["WORKFLOW"]
 
-jira_url = os.environ["JIRA_URL"].rstrip("/")
-jira_email = os.environ["JIRA_EMAIL"]
-jira_api_token = os.environ["JIRA_API_TOKEN"]
-project_key = os.environ["JIRA_PROJECT_KEY"]
+# --------------------------------------------------
+# Configuration
+# --------------------------------------------------
 
-auth = HTTPBasicAuth(jira_email, jira_api_token)
-headers = {
+JIRA_URL = os.environ["JIRA_URL"].rstrip("/")
+JIRA_EMAIL = os.environ["JIRA_EMAIL"]
+JIRA_API_TOKEN = os.environ["JIRA_API_TOKEN"]
+JIRA_PROJECT_KEY = os.environ["JIRA_PROJECT_KEY"]
+
+VERSION = os.environ["VERSION"]
+TAG = os.environ["TAG"]
+ENVIRONMENT = os.environ["ENVIRONMENT"]
+
+AUTH = (JIRA_EMAIL, JIRA_API_TOKEN)
+
+HEADERS = {
     "Accept": "application/json",
     "Content-Type": "application/json",
 }
 
-project_response = requests.get(
-    f"{jira_url}/rest/api/3/project/{project_key}",
-    auth=auth,
-    headers=headers,
-    timeout=30,
+
+# --------------------------------------------------
+# Helper
+# --------------------------------------------------
+
+def jira_request(method, url, **kwargs):
+    response = requests.request(
+        method,
+        url,
+        auth=AUTH,
+        headers=HEADERS,
+        timeout=30,
+        **kwargs,
+    )
+
+    print(f"Jira response status: {response.status_code}")
+
+    if not response.ok:
+        print(response.text)
+        response.raise_for_status()
+
+    return response
+
+
+# --------------------------------------------------
+# 1. Find Jira project
+# --------------------------------------------------
+
+print(f"Looking up Jira project: {JIRA_PROJECT_KEY}")
+
+project_url = (
+    f"{JIRA_URL}/rest/api/3/project/{JIRA_PROJECT_KEY}"
 )
 
-if not project_response.ok:
-    print(f"Failed to find Jira project {project_key}.")
-    print(f"HTTP status: {project_response.status_code}")
-    print(project_response.text)
-    sys.exit(1)
-
-project_id = project_response.json()["id"]
-
-description = f"""GitHub Release
-
-Version: {version}
-Tag: {tag}
-Environment: {environment}
-Repository: {repository}
-Workflow: {workflow}
-"""
-
-payload = {
-    "name": version,
-    "description": description,
-    "project": int(project_id),
-    "released": False,
-}
-
-response = requests.post(
-    f"{jira_url}/rest/api/3/version",
-    json=payload,
-    auth=auth,
-    headers=headers,
-    timeout=30,
+project_response = jira_request(
+    "GET",
+    project_url,
 )
 
-print(f"Jira response status: {response.status_code}")
+project = project_response.json()
 
-if response.ok:
-    data = response.json()
-    print(f"Jira Release created successfully: {data.get('name')}")
-    print(f"Jira Release ID: {data.get('id')}")
+project_id = project["id"]
+project_key = project["key"]
+project_name = project["name"]
+
+print(f"Jira project: {project_name}")
+print(f"Jira project key: {project_key}")
+print(f"Jira project ID: {project_id}")
+
+
+# --------------------------------------------------
+# 2. Check whether version already exists
+# --------------------------------------------------
+
+print(f"Checking Jira version: {VERSION}")
+
+versions_url = (
+    f"{JIRA_URL}/rest/api/3/project/"
+    f"{project_id}/versions"
+)
+
+versions_response = jira_request(
+    "GET",
+    versions_url,
+)
+
+versions = versions_response.json()
+
+existing_version = next(
+    (
+        version
+        for version in versions
+        if version["name"] == VERSION
+    ),
+    None,
+)
+
+
+# --------------------------------------------------
+# 3. Create Jira version if necessary
+# --------------------------------------------------
+
+if existing_version:
+    jira_version_id = existing_version["id"]
+
+    print(
+        f"Jira version already exists: "
+        f"{VERSION} (ID: {jira_version_id})"
+    )
+
 else:
-    print("Failed to create Jira Release.")
-    print(response.text)
-    sys.exit(1)
+    print(f"Creating Jira version: {VERSION}")
+
+    create_version_url = (
+        f"{JIRA_URL}/rest/api/3/version"
+    )
+
+    payload = {
+        "name": VERSION,
+        "projectId": int(project_id),
+        "description": (
+            f"GitHub release {TAG}"
+        ),
+        "released": False,
+        "archived": False,
+    }
+
+    create_response = jira_request(
+        "POST",
+        create_version_url,
+        json=payload,
+    )
+
+    created_version = create_response.json()
+
+    jira_version_id = created_version["id"]
+
+    print(
+        f"Jira version created successfully: "
+        f"{VERSION} (ID: {jira_version_id})"
+    )
+
+
+# --------------------------------------------------
+# 4. Summary
+# --------------------------------------------------
+
+print("")
+print("========================================")
+print("Release information")
+print("========================================")
+print(f"Jira project : {project_key}")
+print(f"Jira version : {VERSION}")
+print(f"Git tag      : {TAG}")
+print(f"Environment  : {ENVIRONMENT}")
+print(f"Repository   : {os.environ['REPOSITORY']}")
+print(f"Workflow     : {os.environ['WORKFLOW']}")
+print("========================================")
+print("")
+print("Jira release step completed successfully.")
