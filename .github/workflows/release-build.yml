@@ -1,0 +1,41 @@
+name: Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version"
+        required: true
+        default: "1.0.0"
+
+      tag:
+        description: "Git tag"
+        required: true
+        default: "v1.0.0"
+
+      environment:
+        description: "Deployment environment"
+        required: true
+        default: "test"
+
+jobs:
+  release-build:
+    runs-on: ubuntu-latest
+
+    env:
+      VERSION: ${{ inputs.version }}
+      TAG: ${{ inputs.tag }}
+      ENVIRONMENT: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show release variables
+        run: |
+          echo "Version: $VERSION"
+          echo "Tag: $TAG"
+          echo "Environment: $ENVIRONMENT"
+
+      - name: Run Python release script
+        run: python create_release.py
