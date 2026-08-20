@@ -26,6 +26,8 @@ jobs:
       VERSION: ${{ inputs.version }}
       TAG: ${{ inputs.tag }}
       ENVIRONMENT: ${{ inputs.environment }}
+      REPOSITORY: ${{ github.repository }}
+      WORKFLOW: "deploy.yml"
 
     steps:
       - name: Checkout repository
@@ -36,6 +38,8 @@ jobs:
           echo "Version: $VERSION"
           echo "Tag: $TAG"
           echo "Environment: $ENVIRONMENT"
+          echo "Repository: $REPOSITORY"
+          echo "Workflow: $WORKFLOW"
 
       - name: Run Python release script
         run: python create_release.py
