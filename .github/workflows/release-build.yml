@@ -7,12 +7,10 @@ on:
         description: "Release version"
         required: true
         default: "1.0.0"
-
       tag:
         description: "Git tag"
         required: true
         default: "v1.0.0"
-
       environment:
         description: "Deployment environment"
         required: true
@@ -28,6 +26,8 @@ jobs:
       ENVIRONMENT: ${{ inputs.environment }}
       REPOSITORY: ${{ github.repository }}
       WORKFLOW: "deploy.yml"
+      JIRA_PROJECT_KEY: "TEST"
+      JIRA_URL: "https://ranjith-kumar-a.atlassian.net"
 
     steps:
       - name: Checkout repository
@@ -41,5 +41,11 @@ jobs:
           echo "Repository: $REPOSITORY"
           echo "Workflow: $WORKFLOW"
 
+      - name: Install Python dependency
+        run: python -m pip install requests
+
       - name: Run Python release script
+        env:
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         run: python create_release.py
