@@ -26,7 +26,7 @@ jobs:
       ENVIRONMENT: ${{ inputs.environment }}
       REPOSITORY: ${{ github.repository }}
       WORKFLOW: "deploy.yml"
-      JIRA_PROJECT_KEY: "TEST"
+      JIRA_PROJECT_KEY: "SAM"
       JIRA_URL: "https://ranjith-kumar-a.atlassian.net"
 
     steps:
