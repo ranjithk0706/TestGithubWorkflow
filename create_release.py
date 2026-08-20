@@ -23,18 +23,14 @@ headers = {
     "Content-Type": "application/json",
 }
 
-# Release description
-description = f"""Version: {version}
-Tag: {tag}
-Environment: {environment}
-Repository: {repository}
-Workflow: {workflow}
-"""
+# Jira Release description
+# Format:
+# VERSION_TAG_ENVIRONMENT_REPOSITORY_WORKFLOW
+description = f"{version}_{tag}_{environment}_{repository}_{workflow}"
 
 print("Creating Jira Release...")
 print(f"Release name: {version}")
-print("Release description:")
-print(description)
+print(f"Release description: {description}")
 
 # Get Jira project
 project_url = f"{jira_url}/rest/api/3/project/{project_key}"
@@ -89,8 +85,8 @@ if response.ok:
     print("================================")
     print(f"Release name: {release.get('name')}")
     print(f"Release ID: {release.get('id')}")
-    print(f"Project: {release.get('project')}")
     print(f"Project ID: {release.get('projectId')}")
+    print(f"Description: {release.get('description')}")
 else:
     print("Failed to create Jira Release.")
     print(response.text)
