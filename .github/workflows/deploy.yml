@@ -1,12 +1,28 @@
-name: Simple Deploy
+name: Test Deployment
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to deploy"
+        required: true
+      environment:
+        description: "Environment"
+        required: true
+        default: "test"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy
-        run: echo "Deployment triggered successfully from Postman!"
+      - name: Show deployment details
+        run: |
+          echo "================================"
+          echo "Deployment Started"
+          echo "================================"
+          echo "Version: ${{ inputs.version }}"
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "================================"
